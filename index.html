@@ -1,1 +1,29 @@
-test
+# VR-Cormont
+VR@Cormont project repo
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Speaker</title>
+    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  </head>
+  <body>
+    <a-assets>
+      <a-asset-item id="top-obj" src="./assets/Top.obj"></a-asset-item>
+      <a-asset-item id="left-obj" src="./assets/Left.obj"></a-asset-item>
+      <a-asset-item id="right-obj" src="./assets/Right.obj"></a-asset-item>
+      <a-asset-item id="back-obj" src="./assets/Back.obj"></a-asset-item>
+      <a-asset-item id="front-obj" src="./assets/Speaker.obj"></a-asset-item>
+      <a-asset-item id="button-obj" src="./assets/BoutonPoussoir.obj"></a-asset-item>
+    <a-scene>
+      <a-entity id="camera" camera position="0 0 0"></a-entity>
+      <a-entity obj-model="#top-obj"></a-entity>
+      <a-entity obj-model="#left-obj"></a-entity>
+      <a-entity obj-model="#right-obj"></a-entity>
+      <a-entity obj-model="#back-obj"></a-entity>
+      <a-entity obj-model="#front-obj"></a-entity>
+      <a-entity obj-model="#button-obj"></a-entity>      
+    </a-scene>
+  </body>
+</html>
