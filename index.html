@@ -211,6 +211,12 @@
             
             if (el) {
               setTimeout(() => {
+                // Nettoyer les anciennes animations
+                el.removeAttribute('animation__pos');
+                el.removeAttribute('animation__rot');
+                el.removeAttribute('animation__return');
+                el.removeAttribute('animation__rot_return');
+                
                 const orig = originalData[comp.id].position;
                 const targetPos = {
                   x: orig.x + comp.offset.x,
@@ -266,6 +272,7 @@
             
             if (el) {
               if (label) {
+                label.removeAttribute('animation__show');
                 label.setAttribute('animation__hide', {
                   property: 'material.opacity',
                   from: 1,
@@ -278,22 +285,31 @@
               }
               
               setTimeout(() => {
+                // Nettoyer les anciennes animations
+                el.removeAttribute('animation__pos');
+                el.removeAttribute('animation__rot');
+                el.removeAttribute('animation__return');
+                el.removeAttribute('animation__rot_return');
+                
                 const orig = originalData[comp.id].position;
                 const origRot = originalData[comp.id].rotation;
                 
-                el.setAttribute('animation__return', {
-                  property: 'position',
-                  to: `${orig.x} ${orig.y} ${orig.z}`,
-                  dur: 1800,
-                  easing: 'easeInOutCubic'
-                });
-                
-                el.setAttribute('animation__rot_return', {
-                  property: 'rotation',
-                  to: `${origRot.x} ${origRot.y} ${origRot.z}`,
-                  dur: 1800,
-                  easing: 'easeInOutCubic'
-                });
+                // Forcer la position actuelle avant d'animer
+                setTimeout(() => {
+                  el.setAttribute('animation__return', {
+                    property: 'position',
+                    to: `${orig.x} ${orig.y} ${orig.z}`,
+                    dur: 1800,
+                    easing: 'easeInOutCubic'
+                  });
+                  
+                  el.setAttribute('animation__rot_return', {
+                    property: 'rotation',
+                    to: `${origRot.x} ${origRot.y} ${origRot.z}`,
+                    dur: 1800,
+                    easing: 'easeInOutCubic'
+                  });
+                }, 50);
               }, index * 100);
             }
           });
