@@ -39,6 +39,16 @@
     </a-scene>
 
     <script>
+      // Composant pour faire suivre la caméra aux textes
+      AFRAME.registerComponent('look-at-camera', {
+        tick: function() {
+          const camera = document.querySelector('#camera');
+          if (camera) {
+            this.el.object3D.lookAt(camera.object3D.position);
+          }
+        }
+      });
+
       document.addEventListener('DOMContentLoaded', function() {
         const enceinte = document.getElementById('enceinte');
         const particlesContainer = document.getElementById('particles-container');
@@ -49,9 +59,9 @@
           {id: 'Right', name: 'Côté droit', offset: {x: 180, y: 60, z: 0}},
           {id: 'Batteries', name: 'Compartiment batteries', offset: {x: 120, y: -70, z: 80}},
           {id: 'Open', name: 'Bouton marche/arrêt', offset: {x: -90, y: 40, z: -130}},
-          {id: 'Speaker', name: 'Haut-parleur principal', offset: {x: 0, y: 0, z: 200}},
+          {id: 'Speaker', name: 'Haut-parleur principal', offset: {x: -80, y: -30, z: 200}},
           {id: 'Led', name: 'LED indicateur', offset: {x: 0, y: 180, z: 0}},
-          {id: 'partie-avant', name: 'Face avant', offset: {x: 0, y: 0, z: 220}},
+          {id: 'partie-avant', name: 'Face avant', offset: {x: 80, y: 30, z: 240}},
           {id: 'bas', name: 'Base de support', offset: {x: 0, y: -130, z: 0}}
         ];
         
@@ -106,18 +116,21 @@
               };
               
               // Créer le label
-              const label = document.createElement('a-text');
-              label.setAttribute('value', comp.name);
-              label.setAttribute('align', 'center');
-              label.setAttribute('color', '#ffffff');
-              label.setAttribute('width', 30);
-              label.setAttribute('position', '0 30 0');
+              const label = document.createElement('a-entity');
+              label.setAttribute('position', '0 35 0');
               label.setAttribute('visible', false);
-              label.setAttribute('material', 'opacity: 0; transparent: true');
-              label.setAttribute('look-at', '#camera');
-              label.setAttribute('side', 'double');
+              
+              const text = document.createElement('a-text');
+              text.setAttribute('value', comp.name);
+              text.setAttribute('align', 'center');
+              text.setAttribute('color', '#ffffff');
+              text.setAttribute('width', 35);
+              text.setAttribute('material', 'opacity: 0; transparent: true');
+              text.setAttribute('look-at-camera', '');
+              
+              label.appendChild(text);
               el.appendChild(label);
-              labels[comp.id] = label;
+              labels[comp.id] = {container: label, text: text};
             }
           });
           
@@ -249,8 +262,8 @@
                 
                 if (label) {
                   setTimeout(() => {
-                    label.setAttribute('visible', true);
-                    label.setAttribute('animation__show', {
+                    label.container.setAttribute('visible', true);
+                    label.text.setAttribute('animation__show', {
                       property: 'material.opacity',
                       from: 0,
                       to: 1,
@@ -274,15 +287,15 @@
             
             if (el) {
               if (label) {
-                label.removeAttribute('animation__show');
-                label.setAttribute('animation__hide', {
+                label.text.removeAttribute('animation__show');
+                label.text.setAttribute('animation__hide', {
                   property: 'material.opacity',
                   from: 1,
                   to: 0,
                   dur: 400
                 });
                 setTimeout(() => {
-                  label.setAttribute('visible', false);
+                  label.container.setAttribute('visible', false);
                 }, 400);
               }
               
