@@ -39,16 +39,6 @@
     </a-scene>
 
     <script>
-      // Composant pour faire suivre la caméra aux textes
-      AFRAME.registerComponent('look-at-camera', {
-        tick: function() {
-          const camera = document.querySelector('#camera');
-          if (camera) {
-            this.el.object3D.lookAt(camera.object3D.position);
-          }
-        }
-      });
-
       document.addEventListener('DOMContentLoaded', function() {
         const enceinte = document.getElementById('enceinte');
         const particlesContainer = document.getElementById('particles-container');
@@ -116,21 +106,18 @@
               };
               
               // Créer le label
-              const label = document.createElement('a-entity');
-              label.setAttribute('position', '0 35 0');
+              const label = document.createElement('a-text');
+              label.setAttribute('value', comp.name);
+              label.setAttribute('align', 'center');
+              label.setAttribute('color', '#ffffff');
+              label.setAttribute('width', 30);
+              label.setAttribute('position', '0 30 0');
               label.setAttribute('visible', false);
-              
-              const text = document.createElement('a-text');
-              text.setAttribute('value', comp.name);
-              text.setAttribute('align', 'center');
-              text.setAttribute('color', '#ffffff');
-              text.setAttribute('width', 35);
-              text.setAttribute('material', 'opacity: 0; transparent: true');
-              text.setAttribute('look-at-camera', '');
-              
-              label.appendChild(text);
+              label.setAttribute('material', 'opacity: 0; transparent: true');
+              label.setAttribute('look-at', '#camera');
+              label.setAttribute('side', 'double');
               el.appendChild(label);
-              labels[comp.id] = {container: label, text: text};
+              labels[comp.id] = label;
             }
           });
           
@@ -262,8 +249,8 @@
                 
                 if (label) {
                   setTimeout(() => {
-                    label.container.setAttribute('visible', true);
-                    label.text.setAttribute('animation__show', {
+                    label.setAttribute('visible', true);
+                    label.setAttribute('animation__show', {
                       property: 'material.opacity',
                       from: 0,
                       to: 1,
@@ -287,15 +274,15 @@
             
             if (el) {
               if (label) {
-                label.text.removeAttribute('animation__show');
-                label.text.setAttribute('animation__hide', {
+                label.removeAttribute('animation__show');
+                label.setAttribute('animation__hide', {
                   property: 'material.opacity',
                   from: 1,
                   to: 0,
                   dur: 400
                 });
                 setTimeout(() => {
-                  label.container.setAttribute('visible', false);
+                  label.setAttribute('visible', false);
                 }, 400);
               }
               
