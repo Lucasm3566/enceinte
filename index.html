@@ -44,15 +44,15 @@
         const particlesContainer = document.getElementById('particles-container');
         
         const components = [
-          {id: 'back', name: 'Panneau arrière', offset: {x: 0, y: 0, z: -120}},
-          {id: 'Left', name: 'Côté gauche', offset: {x: -100, y: 40, z: 0}},
-          {id: 'Right', name: 'Côté droit', offset: {x: 100, y: 40, z: 0}},
-          {id: 'Batteries', name: 'Compartiment batteries', offset: {x: 70, y: -40, z: 50}},
-          {id: 'Open', name: 'Bouton ouverture', offset: {x: -50, y: 25, z: -80}},
-          {id: 'Speaker', name: 'Haut-parleur', offset: {x: 0, y: 0, z: 110}},
-          {id: 'Led', name: 'LED indicateur', offset: {x: 0, y: 120, z: 0}},
-          {id: 'partie-avant', name: 'Panneau avant', offset: {x: 0, y: 0, z: 140}},
-          {id: 'bas', name: 'Base', offset: {x: 0, y: -80, z: 0}}
+          {id: 'back', name: 'Face arrière', offset: {x: 0, y: 0, z: -200}},
+          {id: 'Left', name: 'Côté gauche', offset: {x: -180, y: 60, z: 0}},
+          {id: 'Right', name: 'Côté droit', offset: {x: 180, y: 60, z: 0}},
+          {id: 'Batteries', name: 'Compartiment batteries', offset: {x: 120, y: -70, z: 80}},
+          {id: 'Open', name: 'Bouton marche/arrêt', offset: {x: -90, y: 40, z: -130}},
+          {id: 'Speaker', name: 'Haut-parleur principal', offset: {x: 0, y: 0, z: 200}},
+          {id: 'Led', name: 'LED indicateur', offset: {x: 0, y: 180, z: 0}},
+          {id: 'partie-avant', name: 'Face avant', offset: {x: 0, y: 0, z: 220}},
+          {id: 'bas', name: 'Base de support', offset: {x: 0, y: -130, z: 0}}
         ];
         
         let isExploded = false;
@@ -111,9 +111,11 @@
               label.setAttribute('align', 'center');
               label.setAttribute('color', '#ffffff');
               label.setAttribute('width', 30);
-              label.setAttribute('position', '0 25 0');
+              label.setAttribute('position', '0 30 0');
               label.setAttribute('visible', false);
               label.setAttribute('material', 'opacity: 0; transparent: true');
+              label.setAttribute('look-at', '#camera');
+              label.setAttribute('side', 'double');
               el.appendChild(label);
               labels[comp.id] = label;
             }
