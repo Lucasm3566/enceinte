@@ -303,10 +303,13 @@
         function startCycle() {
           if (!isExploded) {
             explode();
-          } else {
-            reassemble();
+            // Reassembler après 5 secondes
+            setTimeout(() => {
+              reassemble();
+              // Recommencer l'explosion après 5 secondes supplémentaires
+              setTimeout(() => startCycle(), 5000);
+            }, 5000);
           }
-          setTimeout(() => startCycle(), 5000);
         }
         
         // Attendre le chargement
