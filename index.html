@@ -4,8 +4,84 @@
     <meta charset="utf-8">
     <title>Speaker-VR</title>
     <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
-    <script src="https://unpkg.com/aframe-particle-system-component@1.0.x/dist/aframe-particle-system-component.min.js"></script>
     <script>
+      // Composant pour créer des particules simples
+      AFRAME.registerComponent('simple-particles', {
+        schema: {
+          enabled: {type: 'boolean', default: false},
+          count: {type: 'number', default: 50}
+        },
+        
+        init: function() {
+          this.particles = [];
+          
+          // Créer les particules
+          for (let i = 0; i < this.data.count; i++) {
+            const particle = document.createElement('a-sphere');
+            particle.setAttribute('radius', 0.02);
+            particle.setAttribute('color', ['#ffffff', '#ffaa00', '#ff6600'][Math.floor(Math.random() * 3)]);
+            particle.setAttribute('visible', false);
+            this.el.appendChild(particle);
+            this.particles.push({
+              element: particle,
+              velocity: {x: 0, y: 0, z: 0},
+              life: 0
+            });
+          }
+        },
+        
+        update: function() {
+          if (this.data.enabled) {
+            this.emit();
+          } else {
+            this.hide();
+          }
+        },
+        
+        emit: function() {
+          this.particles.forEach(p => {
+            p.element.setAttribute('visible', true);
+            p.element.setAttribute('position', '0 0 0');
+            
+            // Vélocité aléatoire
+            p.velocity = {
+              x: (Math.random() - 0.5) * 2,
+              y: (Math.random() - 0.5) * 2,
+              z: (Math.random() - 0.5) * 2
+            };
+            p.life = 1.0;
+            
+            // Animation
+            const targetPos = {
+              x: p.velocity.x * 1.5,
+              y: p.velocity.y * 1.5,
+              z: p.velocity.z * 1.5
+            };
+            
+            p.element.setAttribute('animation', {
+              property: 'position',
+              to: `${targetPos.x} ${targetPos.y} ${targetPos.z}`,
+              dur: 1500,
+              easing: 'easeOutQuad'
+            });
+            
+            p.element.setAttribute('animation__opacity', {
+              property: 'material.opacity',
+              from: 1,
+              to: 0,
+              dur: 1500
+            });
+          });
+        },
+        
+        hide: function() {
+          this.particles.forEach(p => {
+            p.element.setAttribute('visible', false);
+          });
+        }
+      });
+      
+      // Composant principal d'animation
       AFRAME.registerComponent('explosion-animation', {
         init: function() {
           this.components = [
@@ -22,13 +98,33 @@
           
           this.isExploded = false;
           this.originalPositions = {};
+          this.originalRotations = {};
           this.labels = {};
           
-          // Sauvegarder les positions originales
+          // Attendre que les modèles soient chargés
+          setTimeout(() => {
+            this.setupComponents();
+            // Démarrer l'animation après 5 secondes
+            setTimeout(() => this.startCycle(), 5000);
+          }, 500);
+        },
+        
+        setupComponents: function() {
+          // Sauvegarder les positions et rotations originales
           this.components.forEach(comp => {
             const el = document.getElementById(comp.id);
             if (el) {
-              this.originalPositions[comp.id] = el.getAttribute('position');
+              this.originalPositions[comp.id] = {
+                x: el.getAttribute('position').x,
+                y: el.getAttribute('position').y,
+                z: el.getAttribute('position').z
+              };
+              
+              this.originalRotations[comp.id] = {
+                x: el.getAttribute('rotation').x,
+                y: el.getAttribute('rotation').y,
+                z: el.getAttribute('rotation').z
+              };
               
               // Créer le texte explicatif
               const label = document.createElement('a-text');
@@ -38,7 +134,7 @@
               label.setAttribute('width', 3);
               label.setAttribute('position', '0 20 0');
               label.setAttribute('visible', false);
-              label.setAttribute('opacity', 0);
+              label.setAttribute('material', 'opacity: 0');
               el.appendChild(label);
               this.labels[comp.id] = label;
             }
@@ -47,20 +143,13 @@
           // Créer le système de particules
           const particles = document.createElement('a-entity');
           particles.setAttribute('id', 'particles');
-          particles.setAttribute('particle-system', {
-            preset: 'dust',
-            particleCount: 500,
-            color: '#ffffff,#ffaa00,#ff6600',
-            size: 0.5,
-            maxAge: 2,
-            enabled: false
+          particles.setAttribute('simple-particles', {
+            enabled: false,
+            count: 80
           });
           particles.setAttribute('position', '0 0 0');
           this.el.appendChild(particles);
           this.particles = particles;
-          
-          // Démarrer l'animation après 5 secondes
-          setTimeout(() => this.startCycle(), 5000);
         },
         
         startCycle: function() {
@@ -78,10 +167,10 @@
           this.isExploded = true;
           
           // Activer les particules
-          this.particles.setAttribute('particle-system', 'enabled', true);
+          this.particles.setAttribute('simple-particles', 'enabled', true);
           setTimeout(() => {
-            this.particles.setAttribute('particle-system', 'enabled', false);
-          }, 1000);
+            this.particles.setAttribute('simple-particles', 'enabled', false);
+          }, 100);
           
           // Animer chaque composant
           this.components.forEach((comp, index) => {
@@ -97,7 +186,7 @@
               
               // Animation de position avec délai échelonné
               setTimeout(() => {
-                el.setAttribute('animation', {
+                el.setAttribute('animation__explode', {
                   property: 'position',
                   to: `${target.x} ${target.y} ${target.z}`,
                   dur: 1500,
@@ -105,9 +194,15 @@
                 });
                 
                 // Rotation pour l'effet d'explosion
+                const randomRot = {
+                  x: this.originalRotations[comp.id].x + (Math.random() - 0.5) * 360,
+                  y: this.originalRotations[comp.id].y + (Math.random() - 0.5) * 360,
+                  z: this.originalRotations[comp.id].z + (Math.random() - 0.5) * 360
+                };
+                
                 el.setAttribute('animation__rotation', {
                   property: 'rotation',
-                  to: `${Math.random() * 180} ${Math.random() * 180} ${Math.random() * 180}`,
+                  to: `${randomRot.x} ${randomRot.y} ${randomRot.z}`,
                   dur: 1500,
                   easing: 'easeOutCubic'
                 });
@@ -115,15 +210,15 @@
                 // Apparition du texte
                 if (label) {
                   label.setAttribute('visible', true);
-                  label.setAttribute('animation', {
-                    property: 'opacity',
+                  label.setAttribute('animation__fadein', {
+                    property: 'material.opacity',
                     from: 0,
                     to: 1,
                     dur: 500,
                     delay: 800
                   });
                 }
-              }, index * 100);
+              }, index * 80);
             }
           });
         },
@@ -131,20 +226,18 @@
         reassemble: function() {
           this.isExploded = false;
           
-          // Désactiver les particules si actives
-          this.particles.setAttribute('particle-system', 'enabled', false);
-          
           // Réassembler chaque composant
           this.components.forEach((comp, index) => {
             const el = document.getElementById(comp.id);
             const label = this.labels[comp.id];
             if (el) {
               const orig = this.originalPositions[comp.id];
+              const origRot = this.originalRotations[comp.id];
               
               // Disparition du texte
               if (label) {
-                label.setAttribute('animation', {
-                  property: 'opacity',
+                label.setAttribute('animation__fadeout', {
+                  property: 'material.opacity',
                   from: 1,
                   to: 0,
                   dur: 300
@@ -156,7 +249,7 @@
               
               // Animation de retour avec délai échelonné
               setTimeout(() => {
-                el.setAttribute('animation', {
+                el.setAttribute('animation__implode', {
                   property: 'position',
                   to: `${orig.x} ${orig.y} ${orig.z}`,
                   dur: 1500,
@@ -164,14 +257,13 @@
                 });
                 
                 // Retour à la rotation originale
-                const origRot = el.getAttribute('rotation');
-                el.setAttribute('animation__rotation', {
+                el.setAttribute('animation__rotation_back', {
                   property: 'rotation',
                   to: `${origRot.x} ${origRot.y} ${origRot.z}`,
                   dur: 1500,
                   easing: 'easeInCubic'
                 });
-              }, index * 100);
+              }, index * 80);
             }
           });
         }
