@@ -29,66 +29,71 @@
         <a-entity id="Led" obj-model="obj: ./assets/led.obj" position="-59.96779 77.85118 -19.66102" material="color: #0080c0"></a-entity>
         <a-entity id="partie-avant" obj-model="obj: ./assets/partie-avant.obj" position="-107.78422 29.11701 -19.38373" rotation="-90 90 0" material="color: #ff0000"></a-entity> 
         <a-entity id="bas" obj-model="obj: ./assets/bas.obj" position="-59.65366 -18.19764 -19.1577" rotation="0 90 0" material="side: double; color: #ff80c0"></a-entity>
+        
+        <!-- Particules à l'intérieur de l'enceinte pour respecter l'échelle -->
+        <a-entity id="particles-container" position="-60 20 -20"></a-entity>
       </a-entity>
-      
-      <!-- Particules -->
-      <a-entity id="particles-container" position="0 0 -2"></a-entity>
       
       <!-- Instructions -->
       <a-text value="Déplacement: WASD | Regarder: Souris" position="-1.5 2.5 -3" color="#ffffff" width="3"></a-text>
     </a-scene>
 
     <script>
-      // Attendre que A-Frame soit complètement chargé
       document.addEventListener('DOMContentLoaded', function() {
         const enceinte = document.getElementById('enceinte');
         const particlesContainer = document.getElementById('particles-container');
         
         const components = [
-          {id: 'back', name: 'Panneau arrière', offset: {x: 0, y: 0, z: -50}},
-          {id: 'Left', name: 'Côté gauche', offset: {x: -40, y: 20, z: 0}},
-          {id: 'Right', name: 'Côté droit', offset: {x: 40, y: 20, z: 0}},
-          {id: 'Batteries', name: 'Compartiment batteries', offset: {x: 30, y: -10, z: 20}},
-          {id: 'Open', name: 'Bouton ouverture', offset: {x: -20, y: 10, z: -30}},
-          {id: 'Speaker', name: 'Haut-parleur', offset: {x: 0, y: 0, z: 40}},
-          {id: 'Led', name: 'LED indicateur', offset: {x: 0, y: 50, z: 0}},
-          {id: 'partie-avant', name: 'Panneau avant', offset: {x: 0, y: 0, z: 60}},
-          {id: 'bas', name: 'Base', offset: {x: 0, y: -30, z: 0}}
+          {id: 'back', name: 'Panneau arrière', offset: {x: 0, y: 0, z: -80}},
+          {id: 'Left', name: 'Côté gauche', offset: {x: -60, y: 30, z: 0}},
+          {id: 'Right', name: 'Côté droit', offset: {x: 60, y: 30, z: 0}},
+          {id: 'Batteries', name: 'Compartiment batteries', offset: {x: 40, y: -20, z: 30}},
+          {id: 'Open', name: 'Bouton ouverture', offset: {x: -30, y: 15, z: -50}},
+          {id: 'Speaker', name: 'Haut-parleur', offset: {x: 0, y: 0, z: 70}},
+          {id: 'Led', name: 'LED indicateur', offset: {x: 0, y: 80, z: 0}},
+          {id: 'partie-avant', name: 'Panneau avant', offset: {x: 0, y: 0, z: 90}},
+          {id: 'bas', name: 'Base', offset: {x: 0, y: -50, z: 0}}
         ];
         
         let isExploded = false;
         const originalData = {};
         const labels = {};
         const particles = [];
+        let explosionSphere = null;
         
-        // Créer les particules
+        // Créer les particules avec la bonne échelle
         function createParticles() {
-          const colors = ['#ffffff', '#ffaa00', '#ff6600'];
-          for (let i = 0; i < 100; i++) {
-            const particle = document.createElement('a-sphere');
-            particle.setAttribute('radius', 0.015);
+          const colors = ['#ffffff', '#ffaa00', '#ff6600', '#ff0000'];
+          
+          // Sphère d'explosion centrale
+          explosionSphere = document.createElement('a-sphere');
+          explosionSphere.setAttribute('radius', 10);
+          explosionSphere.setAttribute('color', '#ffaa00');
+          explosionSphere.setAttribute('material', 'opacity: 0; emissive: #ff6600; emissiveIntensity: 2; transparent: true');
+          explosionSphere.setAttribute('visible', false);
+          particlesContainer.appendChild(explosionSphere);
+          
+          // Particules individuelles
+          for (let i = 0; i < 120; i++) {
+            const particle = document.createElement('a-box');
+            particle.setAttribute('width', 2);
+            particle.setAttribute('height', 2);
+            particle.setAttribute('depth', 2);
             particle.setAttribute('color', colors[Math.floor(Math.random() * colors.length)]);
-            particle.setAttribute('material', 'opacity: 0');
+            particle.setAttribute('material', 'opacity: 0; transparent: true; emissive: ' + colors[Math.floor(Math.random() * colors.length)] + '; emissiveIntensity: 0.5');
             particle.setAttribute('visible', false);
             particlesContainer.appendChild(particle);
             particles.push(particle);
           }
           
-          // Créer la sphère d'explosion centrale
-          const explosionSphere = document.createElement('a-sphere');
-          explosionSphere.setAttribute('id', 'explosion-sphere');
-          explosionSphere.setAttribute('radius', 0.1);
-          explosionSphere.setAttribute('color', '#ffaa00');
-          explosionSphere.setAttribute('material', 'opacity: 0; emissive: #ff6600; emissiveIntensity: 2');
-          explosionSphere.setAttribute('visible', false);
-          particlesContainer.appendChild(explosionSphere);
+          console.log('Particules créées:', particles.length);
         }
         
         // Initialisation
         function init() {
+          console.log('Initialisation...');
           createParticles();
           
-          // Sauvegarder les données originales et créer les labels
           components.forEach(comp => {
             const el = document.getElementById(comp.id);
             if (el) {
@@ -105,88 +110,98 @@
               label.setAttribute('value', comp.name);
               label.setAttribute('align', 'center');
               label.setAttribute('color', '#ffffff');
-              label.setAttribute('width', 3);
-              label.setAttribute('position', '0 0.2 0');
+              label.setAttribute('width', 30);
+              label.setAttribute('position', '0 25 0');
               label.setAttribute('visible', false);
-              label.setAttribute('material', 'opacity: 0');
+              label.setAttribute('material', 'opacity: 0; transparent: true');
               el.appendChild(label);
               labels[comp.id] = label;
             }
           });
           
-          // Démarrer le cycle
+          console.log('Configuration terminée, démarrage dans 5s...');
           setTimeout(() => startCycle(), 5000);
         }
         
         // Émettre les particules
         function emitParticles() {
-          const explosionSphere = document.getElementById('explosion-sphere');
+          console.log('Émission des particules');
           
-          // Animation de la sphère d'explosion centrale
-          explosionSphere.setAttribute('visible', true);
-          explosionSphere.setAttribute('material', 'opacity: 1; emissive: #ff6600; emissiveIntensity: 3');
-          explosionSphere.setAttribute('radius', 0.1);
+          // Sphère d'explosion
+          if (explosionSphere) {
+            explosionSphere.setAttribute('visible', true);
+            explosionSphere.setAttribute('material', 'opacity: 1; emissive: #ff6600; emissiveIntensity: 3; transparent: true');
+            explosionSphere.setAttribute('radius', 10);
+            
+            explosionSphere.setAttribute('animation__expand', {
+              property: 'radius',
+              from: 10,
+              to: 100,
+              dur: 600,
+              easing: 'easeOutQuad'
+            });
+            
+            explosionSphere.setAttribute('animation__fade', {
+              property: 'material.opacity',
+              from: 1,
+              to: 0,
+              dur: 600,
+              easing: 'easeOutQuad'
+            });
+            
+            setTimeout(() => {
+              explosionSphere.setAttribute('visible', false);
+            }, 600);
+          }
           
-          // Expansion rapide
-          explosionSphere.setAttribute('animation', {
-            property: 'radius',
-            from: 0.1,
-            to: 0.8,
-            dur: 400,
-            easing: 'easeOutQuad'
-          });
-          
-          explosionSphere.setAttribute('animation__fade', {
-            property: 'material.opacity',
-            from: 1,
-            to: 0,
-            dur: 400,
-            easing: 'easeOutQuad'
-          });
-          
-          setTimeout(() => {
-            explosionSphere.setAttribute('visible', false);
-          }, 400);
-          
-          // Particules qui s'échappent
+          // Particules
           particles.forEach((particle, i) => {
             setTimeout(() => {
               const angle = (i / particles.length) * Math.PI * 2;
-              const elevation = (Math.random() - 0.5) * Math.PI;
-              const radius = 0.8 + Math.random() * 0.7;
+              const elevation = (Math.random() - 0.5) * Math.PI * 0.8;
+              const radius = 80 + Math.random() * 60;
               
               particle.setAttribute('visible', true);
               particle.setAttribute('position', '0 0 0');
-              particle.setAttribute('material', 'opacity: 1');
+              particle.setAttribute('material', 'opacity: 1; transparent: true');
               
               const targetX = Math.cos(angle) * Math.cos(elevation) * radius;
               const targetY = Math.sin(elevation) * radius;
               const targetZ = Math.sin(angle) * Math.cos(elevation) * radius;
               
-              particle.setAttribute('animation', {
+              particle.setAttribute('animation__move', {
                 property: 'position',
                 to: `${targetX} ${targetY} ${targetZ}`,
-                dur: 1500,
+                dur: 1800,
                 easing: 'easeOutCubic'
+              });
+              
+              particle.setAttribute('animation__spin', {
+                property: 'rotation',
+                to: `${Math.random() * 360} ${Math.random() * 360} ${Math.random() * 360}`,
+                dur: 1800,
+                easing: 'linear'
               });
               
               particle.setAttribute('animation__fade', {
                 property: 'material.opacity',
                 from: 1,
                 to: 0,
-                dur: 1500,
+                dur: 1800,
+                delay: 200,
                 easing: 'easeInQuad'
               });
               
               setTimeout(() => {
                 particle.setAttribute('visible', false);
-              }, 1500);
-            }, i * 8);
+              }, 2000);
+            }, i * 5);
           });
         }
         
         // Explosion
         function explode() {
+          console.log('EXPLOSION !');
           isExploded = true;
           emitParticles();
           
@@ -205,43 +220,44 @@
                 
                 const origRot = originalData[comp.id].rotation;
                 const targetRot = {
-                  x: origRot.x + (Math.random() - 0.5) * 90,
-                  y: origRot.y + (Math.random() - 0.5) * 90,
-                  z: origRot.z + (Math.random() - 0.5) * 90
+                  x: origRot.x + (Math.random() - 0.5) * 120,
+                  y: origRot.y + (Math.random() - 0.5) * 120,
+                  z: origRot.z + (Math.random() - 0.5) * 120
                 };
                 
                 el.setAttribute('animation__pos', {
                   property: 'position',
                   to: `${targetPos.x} ${targetPos.y} ${targetPos.z}`,
-                  dur: 1500,
+                  dur: 1800,
                   easing: 'easeOutCubic'
                 });
                 
                 el.setAttribute('animation__rot', {
                   property: 'rotation',
                   to: `${targetRot.x} ${targetRot.y} ${targetRot.z}`,
-                  dur: 1500,
+                  dur: 1800,
                   easing: 'easeOutCubic'
                 });
                 
                 if (label) {
                   setTimeout(() => {
                     label.setAttribute('visible', true);
-                    label.setAttribute('animation', {
+                    label.setAttribute('animation__show', {
                       property: 'material.opacity',
                       from: 0,
                       to: 1,
-                      dur: 500
+                      dur: 600
                     });
-                  }, 800);
+                  }, 1000);
                 }
-              }, index * 80);
+              }, index * 100);
             }
           });
         }
         
         // Reassemblage
         function reassemble() {
+          console.log('REASSEMBLAGE');
           isExploded = false;
           
           components.forEach((comp, index) => {
@@ -250,35 +266,35 @@
             
             if (el) {
               if (label) {
-                label.setAttribute('animation', {
+                label.setAttribute('animation__hide', {
                   property: 'material.opacity',
                   from: 1,
                   to: 0,
-                  dur: 300
+                  dur: 400
                 });
                 setTimeout(() => {
                   label.setAttribute('visible', false);
-                }, 300);
+                }, 400);
               }
               
               setTimeout(() => {
                 const orig = originalData[comp.id].position;
                 const origRot = originalData[comp.id].rotation;
                 
-                el.setAttribute('animation__pos', {
+                el.setAttribute('animation__return', {
                   property: 'position',
                   to: `${orig.x} ${orig.y} ${orig.z}`,
-                  dur: 1500,
-                  easing: 'easeInCubic'
+                  dur: 1800,
+                  easing: 'easeInOutCubic'
                 });
                 
-                el.setAttribute('animation__rot', {
+                el.setAttribute('animation__rot_return', {
                   property: 'rotation',
                   to: `${origRot.x} ${origRot.y} ${origRot.z}`,
-                  dur: 1500,
-                  easing: 'easeInCubic'
+                  dur: 1800,
+                  easing: 'easeInOutCubic'
                 });
-              }, index * 80);
+              }, index * 100);
             }
           });
         }
@@ -293,7 +309,7 @@
           setTimeout(() => startCycle(), 5000);
         }
         
-        // Attendre le chargement de la scène
+        // Attendre le chargement
         const scene = document.querySelector('a-scene');
         if (scene.hasLoaded) {
           init();
