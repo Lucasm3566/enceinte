@@ -2,98 +2,240 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Speaker VR</title>
+    <title>Speaker VR - Explosion Animation</title>
     <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
-
     <script>
-      AFRAME.registerComponent("explode-system", {
-        schema: { distance: {type: "number", default: 0.3} },
+      // Composant pour les particules d'explosion
+      AFRAME.registerComponent("particle-emitter", {
+        schema: {
+          active: {type: "boolean", default: false},
+          count: {type: "number", default: 30}
+        },
+        init: function () {
+          this.particles = [];
+          for (let i = 0; i < this.data.count; i++) {
+            const particle = document.createElement("a-sphere");
+            particle.setAttribute("radius", "0.01");
+            particle.setAttribute("color", "#ff6600");
+            particle.setAttribute("opacity", "0");
+            this.el.appendChild(particle);
+            this.particles.push(particle);
+          }
+        },
+        update: function () {
+          if (this.data.active) {
+            this.emit();
+          }
+        },
+        emit: function () {
+          this.particles.forEach((p, i) => {
+            const angle = (Math.PI * 2 * i) / this.particles.length;
+            const speed = 0.3 + Math.random() * 0.2;
+            const dx = Math.cos(angle) * speed;
+            const dy = (Math.random() - 0.5) * speed;
+            const dz = Math.sin(angle) * speed;
+            
+            p.setAttribute("opacity", "0.8");
+            p.setAttribute("animation__move", {
+              property: "position",
+              to: `${dx} ${dy} ${dz}`,
+              dur: 800,
+              easing: "easeOutQuad"
+            });
+            p.setAttribute("animation__fade", {
+              property: "opacity",
+              to: "0",
+              dur: 800,
+              easing: "easeInQuad"
+            });
+            p.setAttribute("animation__scale", {
+              property: "scale",
+              from: "1 1 1",
+              to: "0.1 0.1 0.1",
+              dur: 800
+            });
+            
+            setTimeout(() => {
+              p.object3D.position.set(0, 0, 0);
+              p.setAttribute("scale", "1 1 1");
+            }, 850);
+          });
+        }
+      });
 
+      // Système d'explosion principal
+      AFRAME.registerComponent("explode-system", {
+        schema: { 
+          distance: {type: "number", default: 0.5},
+          duration: {type: "number", default: 1200}
+        },
         init: function () {
           const el = this.el;
-          this.parts = Array.from(el.children);
-
-          // Stockage des positions initiales
+          this.parts = Array.from(el.children).filter(child => 
+            child.hasAttribute("obj-model") || child.id
+          );
+          
+          // Stockage des positions et rotations initiales
           this.initial = this.parts.map(p => ({
             el: p,
-            pos: p.object3D.position.clone()
+            pos: p.object3D.position.clone(),
+            rot: p.object3D.rotation.clone()
           }));
-
-          // Ajout de labels
+          
+          // Ajout d'émetteurs de particules
+          this.emitters = [];
+          this.parts.forEach((p, i) => {
+            const emitter = document.createElement("a-entity");
+            emitter.setAttribute("particle-emitter", "active: false");
+            p.appendChild(emitter);
+            this.emitters.push(emitter);
+          });
+          
+          // Ajout de labels informatifs
           this.parts.forEach(p => {
             const label = document.createElement("a-text");
-            label.setAttribute("value", p.id);
-            label.setAttribute("color", "white");
+            const name = p.id || "Composant";
+            label.setAttribute("value", name.charAt(0).toUpperCase() + name.slice(1));
+            label.setAttribute("color", "#ffffff");
             label.setAttribute("align", "center");
-            label.setAttribute("scale", "0.4 0.4 0.4");
+            label.setAttribute("scale", "0.5 0.5 0.5");
             label.setAttribute("visible", "false");
-            label.object3D.position.set(0, 0.15, 0);
+            label.setAttribute("opacity", "0");
+            label.object3D.position.set(0, 0.2, 0);
             p.appendChild(label);
           });
-
+          
           this.exploded = false;
-          setInterval(() => this.toggle(), 5000);
+          this.animating = false;
+          
+          // Démarrage après 5 secondes
+          setTimeout(() => {
+            this.startLoop();
+          }, 5000);
         },
-
+        
+        startLoop: function () {
+          if (!this.animating) {
+            this.toggle();
+            setInterval(() => this.toggle(), 5000);
+          }
+        },
+        
         toggle: function () {
+          if (this.animating) return;
+          this.animating = true;
           this.exploded = !this.exploded;
-
+          
           this.parts.forEach((p, i) => {
             const orig = this.initial[i];
-
+            const label = Array.from(p.children).find(c => c.tagName === "A-TEXT");
+            const emitter = this.emitters[i];
+            
             if (this.exploded) {
-              // Calcul position explosée aléatoire
-              const dx = (Math.random() - 0.5) * this.data.distance;
-              const dy = (Math.random() - 0.5) * this.data.distance;
-              const dz = (Math.random() - 0.5) * this.data.distance;
-
-              p.setAttribute("animation__explode", {
+              // EXPLOSION
+              emitter.setAttribute("particle-emitter", "active", true);
+              
+              // Position explosée avec distribution radiale
+              const angle = (Math.PI * 2 * i) / this.parts.length;
+              const radius = this.data.distance;
+              const dx = Math.cos(angle) * radius + (Math.random() - 0.5) * 0.1;
+              const dy = (Math.random() - 0.5) * radius * 0.8;
+              const dz = Math.sin(angle) * radius + (Math.random() - 0.5) * 0.1;
+              
+              // Rotation aléatoire
+              const rx = (Math.random() - 0.5) * Math.PI * 0.5;
+              const ry = (Math.random() - 0.5) * Math.PI * 0.5;
+              const rz = (Math.random() - 0.5) * Math.PI * 0.5;
+              
+              p.setAttribute("animation__pos", {
                 property: "position",
                 to: `${orig.pos.x + dx} ${orig.pos.y + dy} ${orig.pos.z + dz}`,
-                dur: 1200,
+                dur: this.data.duration,
+                easing: "easeOutCubic"
+              });
+              
+              p.setAttribute("animation__rot", {
+                property: "rotation",
+                to: `${(orig.rot.x + rx) * 180/Math.PI} ${(orig.rot.y + ry) * 180/Math.PI} ${(orig.rot.z + rz) * 180/Math.PI}`,
+                dur: this.data.duration,
                 easing: "easeOutQuad"
               });
-
-              p.children[0].setAttribute("visible", "true");
-
+              
+              // Affichage du label avec délai
+              setTimeout(() => {
+                if (label) {
+                  label.setAttribute("visible", "true");
+                  label.setAttribute("animation__fadein", {
+                    property: "opacity",
+                    from: "0",
+                    to: "1",
+                    dur: 400
+                  });
+                }
+              }, this.data.duration * 0.5);
+              
             } else {
-              p.setAttribute("animation__implode", {
+              // IMPLOSION
+              if (label) {
+                label.setAttribute("animation__fadeout", {
+                  property: "opacity",
+                  to: "0",
+                  dur: 300
+                });
+                setTimeout(() => label.setAttribute("visible", "false"), 300);
+              }
+              
+              p.setAttribute("animation__pos", {
                 property: "position",
                 to: `${orig.pos.x} ${orig.pos.y} ${orig.pos.z}`,
-                dur: 1200,
-                easing: "easeOutQuad"
+                dur: this.data.duration,
+                easing: "easeInOutCubic"
               });
-
-              p.children[0].setAttribute("visible", "false");
+              
+              p.setAttribute("animation__rot", {
+                property: "rotation",
+                to: `${orig.rot.x * 180/Math.PI} ${orig.rot.y * 180/Math.PI} ${orig.rot.z * 180/Math.PI}`,
+                dur: this.data.duration,
+                easing: "easeInOutQuad"
+              });
             }
           });
+          
+          setTimeout(() => {
+            this.animating = false;
+          }, this.data.duration);
         }
       });
     </script>
   </head>
-
   <body>
-    <a-scene>
-
-      <!-- Caméra -->
-      <a-entity camera position="0 1.6 3"></a-entity>
-
-      <!-- Lumières -->
-      <a-entity light="type: ambient; intensity: 0.7"></a-entity>
-      <a-entity light="type: directional; intensity: 1" position="3 5 2"></a-entity>
-
-      <!-- GROUPE -->
-      <a-entity id="enceinte" explode-system scale="0.01 0.01 0.01">
-
-        <!-- Même si les OBJ ne se chargent pas, la scène DOIT fonctionner -->
-        <a-entity id="back" obj-model="obj: assets/Back.obj" position="0 0 0"></a-entity>
-        <a-entity id="Left" obj-model="obj: assets/Left.obj" position="0 0.4 0"></a-entity>
-        <a-entity id="Right" obj-model="obj: assets/Right.obj" position="0 -0.4 0"></a-entity>
-        <a-entity id="Speaker" obj-model="obj: assets/Speaker.obj" position="0 0 0.4"></a-entity>
-        <a-entity id="Open" obj-model="obj: assets/Open.obj" position="0 0 -0.4"></a-entity>
-
+    <a-scene background="color: #1a1a2e">
+      <!-- Caméra avec contrôles -->
+      <a-entity camera look-controls wasd-controls position="0 1.6 3">
+        <a-cursor></a-cursor>
       </a-entity>
-
+      
+      <!-- Environnement lumineux -->
+      <a-entity light="type: ambient; intensity: 0.6; color: #bbccff"></a-entity>
+      <a-entity light="type: directional; intensity: 0.8; color: #ffffff" position="3 5 2"></a-entity>
+      <a-entity light="type: point; intensity: 0.5; color: #ff9966" position="-2 3 -1"></a-entity>
+      
+      <!-- Sol -->
+      <a-plane position="0 0 0" rotation="-90 0 0" width="10" height="10" color="#16213e" opacity="0.3"></a-plane>
+      
+      <!-- GROUPE ENCEINTE -->
+      <a-entity id="enceinte" explode-system="distance: 0.6; duration: 1200" 
+                position="0 1.5 0" scale="0.01 0.01 0.01">
+        <a-entity id="back" obj-model="obj: assets/Back.obj" material="color: #666666"></a-entity>
+        <a-entity id="left" obj-model="obj: assets/Left.obj" material="color: #555555"></a-entity>
+        <a-entity id="right" obj-model="obj: assets/Right.obj" material="color: #555555"></a-entity>
+        <a-entity id="speaker" obj-model="obj: assets/Speaker.obj" material="color: #333333"></a-entity>
+        <a-entity id="grille" obj-model="obj: assets/Open.obj" material="color: #222222"></a-entity>
+      </a-entity>
+      
+      <!-- Instructions -->
+      <a-text value="Enceinte VR - Animation d'explosion" position="0 2.8 -1" 
+              align="center" color="#00d9ff" scale="0.8 0.8 0.8"></a-text>
     </a-scene>
   </body>
 </html>
