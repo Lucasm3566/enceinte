@@ -11,6 +11,8 @@
         schema: {
           distance: { type: "number", default: 0.5 }, // distance d’éloignement
           floatAmplitude: { type: "number", default: 0.1 },
+          explosionDelay: { type: "number", default: 5000 }, // délai avant première explosion (5s)
+          reformationDelay: { type: "number", default: 5000 }, // délai avant reformation (5s)
         },
 
         init: function () {
@@ -24,28 +26,52 @@
             rot: p.object3D.rotation.clone(),
           }));
 
-          // Création des labels
+          // Création des labels avec descriptions explicatives (personnalisez-les si besoin)
+          const descriptions = {
+            back: "Partie arrière : Protège les composants internes et améliore la résonance.",
+            Left: "Côté gauche : Contribue à la structure et à l'esthétique de l'enceinte.",
+            Right: "Côté droit : Symétrique au côté gauche pour un équilibre acoustique.",
+            Batteries: "Batteries : Fournissent l'énergie pour un fonctionnement sans fil.",
+            Open: "Ouverture : Permet l'accès aux composants internes pour la maintenance.",
+            Speaker: "Haut-parleur : Convertit les signaux électriques en ondes sonores.",
+            Led: "LED : Indicateur lumineux pour l'état de l'appareil.",
+            "partie-avant": "Partie avant : Diffuse le son et protège le haut-parleur.",
+            bas: "Partie basse : Base stable pour l'enceinte.",
+          };
+
           this.parts.forEach((p) => {
             const label = document.createElement("a-text");
-            label.setAttribute("value", p.id);
+            label.setAttribute("value", descriptions[p.id] || p.id); // Utilise la description ou l'ID par défaut
             label.setAttribute("align", "center");
             label.setAttribute("color", "#FFF");
             label.setAttribute("side", "double");
             label.setAttribute("scale", "0.5 0.5 0.5");
             label.setAttribute("visible", "false");
-            label.object3D.position.set(0, 0.2, 0);
+            label.object3D.position.set(0, 0.2, 0); // Position relative au composant
             p.appendChild(label);
           });
 
           this.exploded = false;
-          this.toggleExplosion();
+
+          // Démarre le cycle après le délai initial (enceinte assemblée au départ)
+          setTimeout(() => this.toggleExplosion(), this.data.explosionDelay);
         },
 
         toggleExplosion: function () {
           this.exploded = !this.exploded;
 
+          // Gestion des particules : visibles seulement pendant l'explosion
+          const particles = document.querySelector('[particle-system]');
+          if (particles) {
+            particles.setAttribute('visible', this.exploded);
+          }
+
           this.parts.forEach((p, i) => {
             const init = this.initialTransforms[i];
+
+            // Supprime les animations existantes pour éviter les conflits
+            p.removeAttribute("animation__pos");
+            p.removeAttribute("animation__float");
 
             if (this.exploded) {
               // Position éclatée (aléatoire autour du centre)
@@ -60,7 +86,7 @@
                 easing: "easeOutQuad",
               });
 
-              // Flottement
+              // Flottement (seulement pendant l'explosion)
               p.setAttribute("animation__float", {
                 property: "position",
                 dir: "alternate",
@@ -70,12 +96,11 @@
                 to: `${init.pos.x + dx} ${init.pos.y + dy + this.data.floatAmplitude} ${init.pos.z + dz}`,
               });
 
-              // Affichage texte
+              // Affichage du texte explicatif
               p.children[0].setAttribute("visible", "true");
 
             } else {
-              p.removeAttribute("animation__float");
-
+              // Retour à la position initiale
               p.setAttribute("animation__pos", {
                 property: "position",
                 to: `${init.pos.x} ${init.pos.y} ${init.pos.z}`,
@@ -83,12 +108,14 @@
                 easing: "easeOutQuad",
               });
 
+              // Masquage du texte
               p.children[0].setAttribute("visible", "false");
             }
           });
 
-          // Reboucle après 5 secondes
-          setTimeout(() => this.toggleExplosion(), 5000);
+          // Reboucle : si explosé, attendre reformationDelay pour se reformer ; sinon, attendre explosionDelay pour exploser
+          const nextDelay = this.exploded ? this.data.reformationDelay : this.data.explosionDelay;
+          setTimeout(() => this.toggleExplosion(), nextDelay);
         },
       });
     </script>
@@ -99,7 +126,6 @@
 
   <body>
     <a-scene>
-
       <!-- Caméra -->
       <a-entity id="camera" camera wasd-controls look-controls position="0 1.6 3"></a-entity>
 
@@ -107,15 +133,15 @@
       <a-entity light="type: ambient; intensity: 0.7"></a-entity>
       <a-entity light="type: directional; intensity: 0.8" position="3 5 2"></a-entity>
 
-      <!-- Effet de particules (explosion) -->
+      <!-- Effet de particules (explosion) - Invisible par défaut -->
       <a-entity
         particle-system="preset: dust; particleCount: 500; size: 2; color: #ffaa00"
-        position="0 1 0">
+        position="0 1 0"
+        visible="false">
       </a-entity>
 
       <!-- OBJ regroupés dans "enceinte" -->
       <a-entity id="enceinte" explode-system scale="0.01 0.01 0.01">
-
         <a-entity id="back" obj-model="obj: ./assets/Back.obj" position="-20.15299 4.74877 -54.67917"></a-entity>
         <a-entity id="Left" obj-model="obj: ./assets/Left.obj" position="-31.10108 62.18591 -69.24553"></a-entity>
         <a-entity id="Right" obj-model="obj: ./assets/Right.obj" position="-89.76148 21.65531 21.74075"></a-entity>
@@ -125,9 +151,7 @@
         <a-entity id="Led" obj-model="obj: ./assets/led.obj" position="-59.96779 77.85118 -19.66102"></a-entity>
         <a-entity id="partie-avant" obj-model="obj: ./assets/partie-avant.obj" position="-107.78422 29.11701 -19.38373"></a-entity>
         <a-entity id="bas" obj-model="obj: ./assets/bas.obj" position="-59.65366 -18.19764 -19.1577"></a-entity>
-
       </a-entity>
-
     </a-scene>
   </body>
 </html>
