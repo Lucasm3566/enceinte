@@ -4,271 +4,6 @@
     <meta charset="utf-8">
     <title>Speaker-VR</title>
     <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
-    <script>
-      // Composant pour créer des particules simples
-      AFRAME.registerComponent('simple-particles', {
-        schema: {
-          enabled: {type: 'boolean', default: false},
-          count: {type: 'number', default: 50}
-        },
-        
-        init: function() {
-          this.particles = [];
-          
-          // Créer les particules
-          for (let i = 0; i < this.data.count; i++) {
-            const particle = document.createElement('a-sphere');
-            particle.setAttribute('radius', 0.02);
-            particle.setAttribute('color', ['#ffffff', '#ffaa00', '#ff6600'][Math.floor(Math.random() * 3)]);
-            particle.setAttribute('visible', false);
-            this.el.appendChild(particle);
-            this.particles.push({
-              element: particle,
-              velocity: {x: 0, y: 0, z: 0},
-              life: 0
-            });
-          }
-        },
-        
-        update: function() {
-          if (this.data.enabled) {
-            this.emit();
-          } else {
-            this.hide();
-          }
-        },
-        
-        emit: function() {
-          this.particles.forEach(p => {
-            p.element.setAttribute('visible', true);
-            p.element.setAttribute('position', '0 0 0');
-            
-            // Vélocité aléatoire
-            p.velocity = {
-              x: (Math.random() - 0.5) * 2,
-              y: (Math.random() - 0.5) * 2,
-              z: (Math.random() - 0.5) * 2
-            };
-            p.life = 1.0;
-            
-            // Animation
-            const targetPos = {
-              x: p.velocity.x * 1.5,
-              y: p.velocity.y * 1.5,
-              z: p.velocity.z * 1.5
-            };
-            
-            p.element.setAttribute('animation', {
-              property: 'position',
-              to: `${targetPos.x} ${targetPos.y} ${targetPos.z}`,
-              dur: 1500,
-              easing: 'easeOutQuad'
-            });
-            
-            p.element.setAttribute('animation__opacity', {
-              property: 'material.opacity',
-              from: 1,
-              to: 0,
-              dur: 1500
-            });
-          });
-        },
-        
-        hide: function() {
-          this.particles.forEach(p => {
-            p.element.setAttribute('visible', false);
-          });
-        }
-      });
-      
-      // Composant principal d'animation
-      AFRAME.registerComponent('explosion-animation', {
-        init: function() {
-          this.components = [
-            {id: 'back', name: 'Panneau arrière', offset: {x: 0, y: 0, z: -150}},
-            {id: 'Left', name: 'Côté gauche', offset: {x: -100, y: 50, z: 0}},
-            {id: 'Right', name: 'Côté droit', offset: {x: 100, y: 50, z: 0}},
-            {id: 'Batteries', name: 'Compartiment batteries', offset: {x: 80, y: -30, z: 50}},
-            {id: 'Open', name: 'Bouton ouverture', offset: {x: -50, y: 30, z: -80}},
-            {id: 'Speaker', name: 'Haut-parleur', offset: {x: 0, y: 0, z: 100}},
-            {id: 'Led', name: 'LED indicateur', offset: {x: 0, y: 120, z: 0}},
-            {id: 'partie-avant', name: 'Panneau avant', offset: {x: 0, y: 0, z: 150}},
-            {id: 'bas', name: 'Base', offset: {x: 0, y: -80, z: 0}}
-          ];
-          
-          this.isExploded = false;
-          this.originalPositions = {};
-          this.originalRotations = {};
-          this.labels = {};
-          
-          // Attendre que les modèles soient chargés
-          setTimeout(() => {
-            this.setupComponents();
-            // Démarrer l'animation après 5 secondes
-            setTimeout(() => this.startCycle(), 5000);
-          }, 500);
-        },
-        
-        setupComponents: function() {
-          // Sauvegarder les positions et rotations originales
-          this.components.forEach(comp => {
-            const el = document.getElementById(comp.id);
-            if (el) {
-              this.originalPositions[comp.id] = {
-                x: el.getAttribute('position').x,
-                y: el.getAttribute('position').y,
-                z: el.getAttribute('position').z
-              };
-              
-              this.originalRotations[comp.id] = {
-                x: el.getAttribute('rotation').x,
-                y: el.getAttribute('rotation').y,
-                z: el.getAttribute('rotation').z
-              };
-              
-              // Créer le texte explicatif
-              const label = document.createElement('a-text');
-              label.setAttribute('value', comp.name);
-              label.setAttribute('align', 'center');
-              label.setAttribute('color', '#ffffff');
-              label.setAttribute('width', 3);
-              label.setAttribute('position', '0 20 0');
-              label.setAttribute('visible', false);
-              label.setAttribute('material', 'opacity: 0');
-              el.appendChild(label);
-              this.labels[comp.id] = label;
-            }
-          });
-          
-          // Créer le système de particules
-          const particles = document.createElement('a-entity');
-          particles.setAttribute('id', 'particles');
-          particles.setAttribute('simple-particles', {
-            enabled: false,
-            count: 80
-          });
-          particles.setAttribute('position', '0 0 0');
-          this.el.appendChild(particles);
-          this.particles = particles;
-        },
-        
-        startCycle: function() {
-          if (!this.isExploded) {
-            this.explode();
-          } else {
-            this.reassemble();
-          }
-          
-          // Continuer le cycle
-          setTimeout(() => this.startCycle(), 5000);
-        },
-        
-        explode: function() {
-          this.isExploded = true;
-          
-          // Activer les particules
-          this.particles.setAttribute('simple-particles', 'enabled', true);
-          setTimeout(() => {
-            this.particles.setAttribute('simple-particles', 'enabled', false);
-          }, 100);
-          
-          // Animer chaque composant
-          this.components.forEach((comp, index) => {
-            const el = document.getElementById(comp.id);
-            const label = this.labels[comp.id];
-            if (el) {
-              const orig = this.originalPositions[comp.id];
-              const target = {
-                x: orig.x + comp.offset.x,
-                y: orig.y + comp.offset.y,
-                z: orig.z + comp.offset.z
-              };
-              
-              // Animation de position avec délai échelonné
-              setTimeout(() => {
-                el.setAttribute('animation__explode', {
-                  property: 'position',
-                  to: `${target.x} ${target.y} ${target.z}`,
-                  dur: 1500,
-                  easing: 'easeOutCubic'
-                });
-                
-                // Rotation pour l'effet d'explosion
-                const randomRot = {
-                  x: this.originalRotations[comp.id].x + (Math.random() - 0.5) * 360,
-                  y: this.originalRotations[comp.id].y + (Math.random() - 0.5) * 360,
-                  z: this.originalRotations[comp.id].z + (Math.random() - 0.5) * 360
-                };
-                
-                el.setAttribute('animation__rotation', {
-                  property: 'rotation',
-                  to: `${randomRot.x} ${randomRot.y} ${randomRot.z}`,
-                  dur: 1500,
-                  easing: 'easeOutCubic'
-                });
-                
-                // Apparition du texte
-                if (label) {
-                  label.setAttribute('visible', true);
-                  label.setAttribute('animation__fadein', {
-                    property: 'material.opacity',
-                    from: 0,
-                    to: 1,
-                    dur: 500,
-                    delay: 800
-                  });
-                }
-              }, index * 80);
-            }
-          });
-        },
-        
-        reassemble: function() {
-          this.isExploded = false;
-          
-          // Réassembler chaque composant
-          this.components.forEach((comp, index) => {
-            const el = document.getElementById(comp.id);
-            const label = this.labels[comp.id];
-            if (el) {
-              const orig = this.originalPositions[comp.id];
-              const origRot = this.originalRotations[comp.id];
-              
-              // Disparition du texte
-              if (label) {
-                label.setAttribute('animation__fadeout', {
-                  property: 'material.opacity',
-                  from: 1,
-                  to: 0,
-                  dur: 300
-                });
-                setTimeout(() => {
-                  label.setAttribute('visible', false);
-                }, 300);
-              }
-              
-              // Animation de retour avec délai échelonné
-              setTimeout(() => {
-                el.setAttribute('animation__implode', {
-                  property: 'position',
-                  to: `${orig.x} ${orig.y} ${orig.z}`,
-                  dur: 1500,
-                  easing: 'easeInCubic'
-                });
-                
-                // Retour à la rotation originale
-                el.setAttribute('animation__rotation_back', {
-                  property: 'rotation',
-                  to: `${origRot.x} ${origRot.y} ${origRot.z}`,
-                  dur: 1500,
-                  easing: 'easeInCubic'
-                });
-              }, index * 80);
-            }
-          });
-        }
-      });
-    </script>
   </head>
   <body>
     <a-scene>
@@ -284,7 +19,7 @@
       <a-sky color="#1a1a2e"></a-sky>
       
       <!-- OBJ Models avec animation -->
-      <a-entity id="enceinte" scale="0.01 0.01 0.01" position="0 0 -2" explosion-animation>
+      <a-entity id="enceinte" scale="0.01 0.01 0.01" position="0 0 -2">
         <a-entity id="back" obj-model="obj: ./assets/Back.obj" position="-20.15299 4.74877 -54.67917" rotation="0 90 0" material="color: #ffff80"></a-entity>
         <a-entity id="Left" obj-model="obj: ./assets/Left.obj" position="-31.10108 62.18591 -69.24553" rotation="0 0 90" material="color: #8080c0"></a-entity>
         <a-entity id="Right" obj-model="obj: ./assets/Right.obj" position="-89.76148 21.65531 21.74075" rotation="0 0 -90" material="color: #8000ff"></a-entity>
@@ -296,8 +31,276 @@
         <a-entity id="bas" obj-model="obj: ./assets/bas.obj" position="-59.65366 -18.19764 -19.1577" rotation="0 90 0" material="side: double; color: #ff80c0"></a-entity>
       </a-entity>
       
+      <!-- Particules -->
+      <a-entity id="particles-container" position="0 0 -2"></a-entity>
+      
       <!-- Instructions -->
       <a-text value="Déplacement: WASD | Regarder: Souris" position="-1.5 2.5 -3" color="#ffffff" width="3"></a-text>
     </a-scene>
+
+    <script>
+      // Attendre que A-Frame soit complètement chargé
+      document.addEventListener('DOMContentLoaded', function() {
+        const enceinte = document.getElementById('enceinte');
+        const particlesContainer = document.getElementById('particles-container');
+        
+        const components = [
+          {id: 'back', name: 'Panneau arrière', offset: {x: 0, y: 0, z: -50}},
+          {id: 'Left', name: 'Côté gauche', offset: {x: -40, y: 20, z: 0}},
+          {id: 'Right', name: 'Côté droit', offset: {x: 40, y: 20, z: 0}},
+          {id: 'Batteries', name: 'Compartiment batteries', offset: {x: 30, y: -10, z: 20}},
+          {id: 'Open', name: 'Bouton ouverture', offset: {x: -20, y: 10, z: -30}},
+          {id: 'Speaker', name: 'Haut-parleur', offset: {x: 0, y: 0, z: 40}},
+          {id: 'Led', name: 'LED indicateur', offset: {x: 0, y: 50, z: 0}},
+          {id: 'partie-avant', name: 'Panneau avant', offset: {x: 0, y: 0, z: 60}},
+          {id: 'bas', name: 'Base', offset: {x: 0, y: -30, z: 0}}
+        ];
+        
+        let isExploded = false;
+        const originalData = {};
+        const labels = {};
+        const particles = [];
+        
+        // Créer les particules
+        function createParticles() {
+          const colors = ['#ffffff', '#ffaa00', '#ff6600'];
+          for (let i = 0; i < 100; i++) {
+            const particle = document.createElement('a-sphere');
+            particle.setAttribute('radius', 0.015);
+            particle.setAttribute('color', colors[Math.floor(Math.random() * colors.length)]);
+            particle.setAttribute('material', 'opacity: 0');
+            particle.setAttribute('visible', false);
+            particlesContainer.appendChild(particle);
+            particles.push(particle);
+          }
+          
+          // Créer la sphère d'explosion centrale
+          const explosionSphere = document.createElement('a-sphere');
+          explosionSphere.setAttribute('id', 'explosion-sphere');
+          explosionSphere.setAttribute('radius', 0.1);
+          explosionSphere.setAttribute('color', '#ffaa00');
+          explosionSphere.setAttribute('material', 'opacity: 0; emissive: #ff6600; emissiveIntensity: 2');
+          explosionSphere.setAttribute('visible', false);
+          particlesContainer.appendChild(explosionSphere);
+        }
+        
+        // Initialisation
+        function init() {
+          createParticles();
+          
+          // Sauvegarder les données originales et créer les labels
+          components.forEach(comp => {
+            const el = document.getElementById(comp.id);
+            if (el) {
+              const pos = el.getAttribute('position');
+              const rot = el.getAttribute('rotation');
+              
+              originalData[comp.id] = {
+                position: {x: pos.x, y: pos.y, z: pos.z},
+                rotation: {x: rot.x, y: rot.y, z: rot.z}
+              };
+              
+              // Créer le label
+              const label = document.createElement('a-text');
+              label.setAttribute('value', comp.name);
+              label.setAttribute('align', 'center');
+              label.setAttribute('color', '#ffffff');
+              label.setAttribute('width', 3);
+              label.setAttribute('position', '0 0.2 0');
+              label.setAttribute('visible', false);
+              label.setAttribute('material', 'opacity: 0');
+              el.appendChild(label);
+              labels[comp.id] = label;
+            }
+          });
+          
+          // Démarrer le cycle
+          setTimeout(() => startCycle(), 5000);
+        }
+        
+        // Émettre les particules
+        function emitParticles() {
+          const explosionSphere = document.getElementById('explosion-sphere');
+          
+          // Animation de la sphère d'explosion centrale
+          explosionSphere.setAttribute('visible', true);
+          explosionSphere.setAttribute('material', 'opacity: 1; emissive: #ff6600; emissiveIntensity: 3');
+          explosionSphere.setAttribute('radius', 0.1);
+          
+          // Expansion rapide
+          explosionSphere.setAttribute('animation', {
+            property: 'radius',
+            from: 0.1,
+            to: 0.8,
+            dur: 400,
+            easing: 'easeOutQuad'
+          });
+          
+          explosionSphere.setAttribute('animation__fade', {
+            property: 'material.opacity',
+            from: 1,
+            to: 0,
+            dur: 400,
+            easing: 'easeOutQuad'
+          });
+          
+          setTimeout(() => {
+            explosionSphere.setAttribute('visible', false);
+          }, 400);
+          
+          // Particules qui s'échappent
+          particles.forEach((particle, i) => {
+            setTimeout(() => {
+              const angle = (i / particles.length) * Math.PI * 2;
+              const elevation = (Math.random() - 0.5) * Math.PI;
+              const radius = 0.8 + Math.random() * 0.7;
+              
+              particle.setAttribute('visible', true);
+              particle.setAttribute('position', '0 0 0');
+              particle.setAttribute('material', 'opacity: 1');
+              
+              const targetX = Math.cos(angle) * Math.cos(elevation) * radius;
+              const targetY = Math.sin(elevation) * radius;
+              const targetZ = Math.sin(angle) * Math.cos(elevation) * radius;
+              
+              particle.setAttribute('animation', {
+                property: 'position',
+                to: `${targetX} ${targetY} ${targetZ}`,
+                dur: 1500,
+                easing: 'easeOutCubic'
+              });
+              
+              particle.setAttribute('animation__fade', {
+                property: 'material.opacity',
+                from: 1,
+                to: 0,
+                dur: 1500,
+                easing: 'easeInQuad'
+              });
+              
+              setTimeout(() => {
+                particle.setAttribute('visible', false);
+              }, 1500);
+            }, i * 8);
+          });
+        }
+        
+        // Explosion
+        function explode() {
+          isExploded = true;
+          emitParticles();
+          
+          components.forEach((comp, index) => {
+            const el = document.getElementById(comp.id);
+            const label = labels[comp.id];
+            
+            if (el) {
+              setTimeout(() => {
+                const orig = originalData[comp.id].position;
+                const targetPos = {
+                  x: orig.x + comp.offset.x,
+                  y: orig.y + comp.offset.y,
+                  z: orig.z + comp.offset.z
+                };
+                
+                const origRot = originalData[comp.id].rotation;
+                const targetRot = {
+                  x: origRot.x + (Math.random() - 0.5) * 90,
+                  y: origRot.y + (Math.random() - 0.5) * 90,
+                  z: origRot.z + (Math.random() - 0.5) * 90
+                };
+                
+                el.setAttribute('animation__pos', {
+                  property: 'position',
+                  to: `${targetPos.x} ${targetPos.y} ${targetPos.z}`,
+                  dur: 1500,
+                  easing: 'easeOutCubic'
+                });
+                
+                el.setAttribute('animation__rot', {
+                  property: 'rotation',
+                  to: `${targetRot.x} ${targetRot.y} ${targetRot.z}`,
+                  dur: 1500,
+                  easing: 'easeOutCubic'
+                });
+                
+                if (label) {
+                  setTimeout(() => {
+                    label.setAttribute('visible', true);
+                    label.setAttribute('animation', {
+                      property: 'material.opacity',
+                      from: 0,
+                      to: 1,
+                      dur: 500
+                    });
+                  }, 800);
+                }
+              }, index * 80);
+            }
+          });
+        }
+        
+        // Reassemblage
+        function reassemble() {
+          isExploded = false;
+          
+          components.forEach((comp, index) => {
+            const el = document.getElementById(comp.id);
+            const label = labels[comp.id];
+            
+            if (el) {
+              if (label) {
+                label.setAttribute('animation', {
+                  property: 'material.opacity',
+                  from: 1,
+                  to: 0,
+                  dur: 300
+                });
+                setTimeout(() => {
+                  label.setAttribute('visible', false);
+                }, 300);
+              }
+              
+              setTimeout(() => {
+                const orig = originalData[comp.id].position;
+                const origRot = originalData[comp.id].rotation;
+                
+                el.setAttribute('animation__pos', {
+                  property: 'position',
+                  to: `${orig.x} ${orig.y} ${orig.z}`,
+                  dur: 1500,
+                  easing: 'easeInCubic'
+                });
+                
+                el.setAttribute('animation__rot', {
+                  property: 'rotation',
+                  to: `${origRot.x} ${origRot.y} ${origRot.z}`,
+                  dur: 1500,
+                  easing: 'easeInCubic'
+                });
+              }, index * 80);
+            }
+          });
+        }
+        
+        // Cycle principal
+        function startCycle() {
+          if (!isExploded) {
+            explode();
+          } else {
+            reassemble();
+          }
+          setTimeout(() => startCycle(), 5000);
+        }
+        
+        // Attendre le chargement de la scène
+        const scene = document.querySelector('a-scene');
+        if (scene.hasLoaded) {
+          init();
+        } else {
+          scene.addEventListener('loaded', init);
+        }
+      });
+    </script>
   </body>
 </html>
